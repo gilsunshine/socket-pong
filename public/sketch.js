@@ -1,55 +1,93 @@
-// ITP Networked Media, Fall 2014
-// https://github.com/shiffman/itp-networked-media
-// Daniel Shiffman
-
 // Keep track of our socket connection
 var socket;
+var leftscore = 0;
+var rightscore = 0;
 
 function setup() {
-  createCanvas(400, 400);
-  background(0);
+  createCanvas(600, 400);
+
+  puck = new Puck();
+  left = new Paddle(true);
+  right = new Paddle(false);
   // Start a socket connection to the server
   // Some day we would run this server somewhere else
-  socket = io.connect(process.env.PORT || 3000);
-  // socket = io.connect('http://localhost:3000');
+  socket = io.connect('http://localhost:3000');
+
+  var data = {
+   x: puck.x,
+   y: puck.y,
+   xspeed: puck.xspeed,
+   yspeed: puck.yspeed,
+   r: puck.r
+ };
   // We make a named event called 'mouse' and write an
   // anonymous callback function
-  socket.on('mouse',
+  socket.on('puck',
     // When we receive data
     function(data) {
-      console.log("Got: " + data.x + " " + data.y);
+      // console.log("Got: " + data.x + " " + data.y);
       // Draw a blue circle
-      fill(0,0,255);
-      noStroke();
-      ellipse(data.x, data.y, 20, 20);
+      puck = data;
     }
   );
 }
 
 function draw() {
-  // Nothing
+  background(0);
+  puck.checkPaddleRight(right);
+  puck.checkPaddleLeft(left);
+
+  left.show();
+  right.show();
+  left.update();
+  right.update();
+
+  puck.update();
+  puck.edges();
+  puck.show();
+
+  fill(255);
+  textSize(32);
+  text(leftscore, 32, 40);
+  text(rightscore, width-64, 40);
+
+  sendpuck(puck.x, puck.y, puck.xspeed, puck.yspeed, puck.r);
 }
 
-function mouseDragged() {
-  // Draw some white circles
-  fill(255);
-  noStroke();
-  ellipse(mouseX,mouseY,20,20);
-  // Send the mouse coordinates
-  sendmouse(mouseX,mouseY);
+function keyReleased() {
+    left.move(0);
+    right.move(0);
+}
+
+function keyPressed() {
+    console.log(key);
+    if (key == 'A') {
+        left.move(-10);
+    } else if (key == 'Z') {
+        left.move(10);
+    }
+
+    if (key == 'J') {
+        right.move(-10);
+    } else if (key == 'M') {
+        right.move(10);
+    }
 }
 
 // Function for sending to the socket
-function sendmouse(xpos, ypos) {
+function sendpuck(x, y, xspeed, yspeed, r) {
   // We are sending!
-  console.log("sendmouse: " + xpos + " " + ypos);
+  console.log("sendpuck: " + x + " " + y);
 
   // Make a little object with  and y
-  var data = {
-    x: xpos,
-    y: ypos
-  };
 
+  var data = {
+    x: puck.x,
+    y: puck.y,
+    xspeed: puck.xspeed,
+    yspeed: puck.yspeed,
+    r: puck.r
+ };
   // Send that object to the socket
-  socket.emit('mouse',data);
+  socket.emit('puck',data);
 }
